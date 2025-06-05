@@ -3,10 +3,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use tracing::{info, warn, error};
+use tracing::{info, error};
 
 use super::feed::{CVEFeed, FeedConfig, FeedSource};
-use super::parser::{CVEParser, CVE};
+use super::parser::CVEParser;
 use super::store::CVEStore;
 
 /// Manages synchronization of multiple CVE feeds

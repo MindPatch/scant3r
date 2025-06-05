@@ -10,18 +10,12 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
-URL: http://testphp.vulnweb.com/guestbook.php
+URL: http://testphp.vulnweb.com/artists.php
 Method: GET
 Depth: 1
 Status: 200
 Content-Type: text/html; charset=UTF-8
 Forms:
-  Action: 
-  Method: POST
-  Parameters:
-    name: anonymous user (Post)
-    submit: add message (Post)
-    text:  (Post)
   Action: search.php?test=query
   Method: POST
   Parameters:
@@ -40,12 +34,48 @@ Depth: 1
 Status: 200
 Content-Type: text/html; charset=UTF-8
 
-URL: http://testphp.vulnweb.com/artists.php
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/
+Method: GET
+Depth: 1
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+URL: http://testphp.vulnweb.com/disclaimer.php
 Method: GET
 Depth: 1
 Status: 200
 Content-Type: text/html; charset=UTF-8
 Forms:
+  Action: search.php?test=query
+  Method: POST
+  Parameters:
+    searchFor:  (Post)
+    goButton: go (Post)
+
+URL: http://testphp.vulnweb.com/cart.php
+Method: GET
+Depth: 1
+Status: 200
+Content-Type: text/html; charset=UTF-8
+Forms:
+  Action: search.php?test=query
+  Method: POST
+  Parameters:
+    searchFor:  (Post)
+    goButton: go (Post)
+
+URL: http://testphp.vulnweb.com/guestbook.php
+Method: GET
+Depth: 1
+Status: 200
+Content-Type: text/html; charset=UTF-8
+Forms:
+  Action: 
+  Method: POST
+  Parameters:
+    name: anonymous user (Post)
+    submit: add message (Post)
+    text:  (Post)
   Action: search.php?test=query
   Method: POST
   Parameters:
@@ -64,42 +94,18 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
-URL: http://testphp.vulnweb.com/disclaimer.php
-Method: GET
-Depth: 1
-Status: 200
-Content-Type: text/html; charset=UTF-8
-Forms:
-  Action: search.php?test=query
-  Method: POST
-  Parameters:
-    searchFor:  (Post)
-    goButton: go (Post)
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/
-Method: GET
-Depth: 1
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/cart.php
-Method: GET
-Depth: 1
-Status: 200
-Content-Type: text/html; charset=UTF-8
-Forms:
-  Action: search.php?test=query
-  Method: POST
-  Parameters:
-    searchFor:  (Post)
-    goButton: go (Post)
-
 URL: http://testphp.vulnweb.com/images/logo.gif
 Method: GET
 Depth: 1
 Status: 200
 Content-Type: image/gif
 Content-Length: 6660
+
+URL: http://testphp.vulnweb.com/privacy.php
+Method: GET
+Depth: 1
+Status: 404
+Content-Type: text/html; charset=UTF-8
 
 URL: http://testphp.vulnweb.com/index.php
 Method: GET
@@ -113,39 +119,12 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
-URL: http://testphp.vulnweb.com/privacy.php
-Method: GET
-Depth: 1
-Status: 404
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/images/remark.gif
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: image/gif
-Content-Length: 79
-
 URL: http://testphp.vulnweb.com/style.css
 Method: GET
 Depth: 1
 Status: 200
 Content-Type: text/css
 Content-Length: 5482
-
-URL: http://testphp.vulnweb.com/search.php?test=query
-Method: GET
-Depth: 1
-Status: 200
-Content-Type: text/html; charset=UTF-8
-Parameters:
-  test: query (Query)
-Forms:
-  Action: search.php?test=query
-  Method: POST
-  Parameters:
-    searchFor:  (Post)
-    goButton: go (Post)
 
 URL: http://testphp.vulnweb.com/login.php
 Method: GET
@@ -164,42 +143,19 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
-URL: http://testphp.vulnweb.com/hpp/?pp=12
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: text/html; charset=UTF-8
-Parameters:
-  pp: 12 (Query)
-Forms:
-  Action: params.php?p=valid&pp=12
-  Method: GET
-  Parameters:
-    aaaa/:  (Query)
-
-URL: http://testphp.vulnweb.com/userinfo.php
+URL: http://testphp.vulnweb.com/search.php?test=query
 Method: GET
 Depth: 1
 Status: 200
 Content-Type: text/html; charset=UTF-8
+Parameters:
+  test: query (Query)
 Forms:
-  Action: userinfo.php
-  Method: POST
-  Parameters:
-    uname:  (Post)
-    pass:  (Post)
   Action: search.php?test=query
   Method: POST
   Parameters:
     searchFor:  (Post)
     goButton: go (Post)
-
-URL: http://testphp.vulnweb.com/AJAX/styles.css
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: text/css
-Content-Length: 562
 
 URL: http://testphp.vulnweb.com/artists.php?artist=1
 Method: GET
@@ -229,6 +185,23 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
+URL: http://testphp.vulnweb.com/userinfo.php
+Method: GET
+Depth: 1
+Status: 200
+Content-Type: text/html; charset=UTF-8
+Forms:
+  Action: userinfo.php
+  Method: POST
+  Parameters:
+    uname:  (Post)
+    pass:  (Post)
+  Action: search.php?test=query
+  Method: POST
+  Parameters:
+    searchFor:  (Post)
+    goButton: go (Post)
+
 URL: http://testphp.vulnweb.com/artists.php?artist=3
 Method: GET
 Depth: 2
@@ -236,6 +209,79 @@ Status: 200
 Content-Type: text/html; charset=UTF-8
 Parameters:
   artist: 3 (Query)
+Forms:
+  Action: search.php?test=query
+  Method: POST
+  Parameters:
+    searchFor:  (Post)
+    goButton: go (Post)
+
+URL: http://testphp.vulnweb.com/AJAX/styles.css
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: text/css
+Content-Length: 562
+
+URL: http://testphp.vulnweb.com/hpp/?pp=12
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: text/html; charset=UTF-8
+Parameters:
+  pp: 12 (Query)
+Forms:
+  Action: params.php?p=valid&pp=12
+  Method: GET
+  Parameters:
+    aaaa/:  (Query)
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/Details/color-printer/3/
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/Details/network-attached-storage-dlink/1/
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/Details/web-camera-a4tech/2/
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/images/1.jpg
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: image/jpeg
+Content-Length: 3551
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/images/2.jpg
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: image/jpeg
+Content-Length: 2739
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/images/3.jpg
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: image/jpeg
+Content-Length: 3560
+
+URL: http://testphp.vulnweb.com/listproducts.php?cat=1
+Method: GET
+Depth: 2
+Status: 200
+Content-Type: text/html; charset=UTF-8
+Parameters:
+  cat: 1 (Query)
 Forms:
   Action: search.php?test=query
   Method: POST
@@ -257,19 +303,12 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
-URL: http://testphp.vulnweb.com/listproducts.php?cat=1
+URL: http://testphp.vulnweb.com/images/remark.gif
 Method: GET
 Depth: 2
 Status: 200
-Content-Type: text/html; charset=UTF-8
-Parameters:
-  cat: 1 (Query)
-Forms:
-  Action: search.php?test=query
-  Method: POST
-  Parameters:
-    searchFor:  (Post)
-    goButton: go (Post)
+Content-Type: image/gif
+Content-Length: 79
 
 URL: http://testphp.vulnweb.com/listproducts.php?cat=3
 Method: GET
@@ -299,45 +338,6 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/Details/color-printer/3/
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/Details/web-camera-a4tech/2/
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/Details/network-attached-storage-dlink/1/
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/images/1.jpg
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: image/jpeg
-Content-Length: 3551
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/images/2.jpg
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: image/jpeg
-Content-Length: 2739
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/images/3.jpg
-Method: GET
-Depth: 2
-Status: 200
-Content-Type: image/jpeg
-Content-Length: 3560
-
 URL: http://testphp.vulnweb.com/signup.php
 Method: GET
 Depth: 2
@@ -361,15 +361,6 @@ Forms:
   Parameters:
     searchFor:  (Post)
     goButton: go (Post)
-
-URL: http://testphp.vulnweb.com/hpp/params.php?p=valid&pp=12
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: text/html; charset=UTF-8
-Parameters:
-  p: valid (Query)
-  pp: 12 (Query)
 
 URL: http://testphp.vulnweb.com/listproducts.php?artist=1
 Method: GET
@@ -413,60 +404,50 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
-URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/6.jpg
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: image/jpeg
-Parameters:
-  file: ./pictures/6.jpg (Query)
-
-URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/6.jpg&size=160
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: image/jpeg
-Parameters:
-  file: ./pictures/6.jpg (Query)
-  size: 160 (Query)
-
-URL: http://testphp.vulnweb.com/product.php?pic=6
+URL: http://testphp.vulnweb.com/hpp/params.php?p=valid&pp=12
 Method: GET
 Depth: 3
 Status: 200
 Content-Type: text/html; charset=UTF-8
 Parameters:
-  pic: 6 (Query)
-Forms:
-  Action: cart.php
-  Method: POST
-  Parameters:
-    price: 10000 (Post)
-    addcart: 6 (Post)
-  Action: search.php?test=query
-  Method: POST
-  Parameters:
-    searchFor:  (Post)
-    goButton: go (Post)
+  p: valid (Query)
+  pp: 12 (Query)
 
-URL: http://testphp.vulnweb.com/product.php?pic=1
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/BuyProduct-3/
 Method: GET
 Depth: 3
 Status: 200
 Content-Type: text/html; charset=UTF-8
-Parameters:
-  pic: 1 (Query)
-Forms:
-  Action: cart.php
-  Method: POST
-  Parameters:
-    price: 500 (Post)
-    addcart: 1 (Post)
-  Action: search.php?test=query
-  Method: POST
-  Parameters:
-    searchFor:  (Post)
-    goButton: go (Post)
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3.html
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/BuyProduct-1/
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1.html
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/BuyProduct-2/
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2.html
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: text/html; charset=UTF-8
 
 URL: http://testphp.vulnweb.com/product.php?pic=2
 Method: GET
@@ -506,19 +487,19 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
-URL: http://testphp.vulnweb.com/product.php?pic=4
+URL: http://testphp.vulnweb.com/product.php?pic=1
 Method: GET
 Depth: 3
 Status: 200
 Content-Type: text/html; charset=UTF-8
 Parameters:
-  pic: 4 (Query)
+  pic: 1 (Query)
 Forms:
   Action: cart.php
   Method: POST
   Parameters:
-    price: 1000 (Post)
-    addcart: 4 (Post)
+    price: 500 (Post)
+    addcart: 1 (Post)
   Action: search.php?test=query
   Method: POST
   Parameters:
@@ -544,6 +525,25 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
+URL: http://testphp.vulnweb.com/product.php?pic=4
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: text/html; charset=UTF-8
+Parameters:
+  pic: 4 (Query)
+Forms:
+  Action: cart.php
+  Method: POST
+  Parameters:
+    price: 1000 (Post)
+    addcart: 4 (Post)
+  Action: search.php?test=query
+  Method: POST
+  Parameters:
+    searchFor:  (Post)
+    goButton: go (Post)
+
 URL: http://testphp.vulnweb.com/product.php?pic=7
 Method: GET
 Depth: 3
@@ -563,6 +563,14 @@ Forms:
     searchFor:  (Post)
     goButton: go (Post)
 
+URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/1.jpg
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: image/jpeg
+Parameters:
+  file: ./pictures/1.jpg (Query)
+
 URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/1.jpg&size=160
 Method: GET
 Depth: 3
@@ -571,14 +579,6 @@ Content-Type: image/jpeg
 Parameters:
   file: ./pictures/1.jpg (Query)
   size: 160 (Query)
-
-URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/1.jpg
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: image/jpeg
-Parameters:
-  file: ./pictures/1.jpg (Query)
 
 URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/2.jpg
 Method: GET
@@ -622,15 +622,6 @@ Content-Type: image/jpeg
 Parameters:
   file: ./pictures/4.jpg (Query)
 
-URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/4.jpg&size=160
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: image/jpeg
-Parameters:
-  file: ./pictures/4.jpg (Query)
-  size: 160 (Query)
-
 URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/5.jpg
 Method: GET
 Depth: 3
@@ -646,6 +637,51 @@ Status: 200
 Content-Type: image/jpeg
 Parameters:
   file: ./pictures/5.jpg (Query)
+  size: 160 (Query)
+
+URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/4.jpg&size=160
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: image/jpeg
+Parameters:
+  file: ./pictures/4.jpg (Query)
+  size: 160 (Query)
+
+URL: http://testphp.vulnweb.com/product.php?pic=6
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: text/html; charset=UTF-8
+Parameters:
+  pic: 6 (Query)
+Forms:
+  Action: cart.php
+  Method: POST
+  Parameters:
+    price: 10000 (Post)
+    addcart: 6 (Post)
+  Action: search.php?test=query
+  Method: POST
+  Parameters:
+    searchFor:  (Post)
+    goButton: go (Post)
+
+URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/6.jpg
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: image/jpeg
+Parameters:
+  file: ./pictures/6.jpg (Query)
+
+URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/6.jpg&size=160
+Method: GET
+Depth: 3
+Status: 200
+Content-Type: image/jpeg
+Parameters:
+  file: ./pictures/6.jpg (Query)
   size: 160 (Query)
 
 URL: http://testphp.vulnweb.com/showimage.php?file=./pictures/7.jpg
@@ -664,42 +700,6 @@ Content-Type: image/jpeg
 Parameters:
   file: ./pictures/7.jpg (Query)
   size: 160 (Query)
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/BuyProduct-3/
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3.html
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/BuyProduct-2/
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/BuyProduct-1/
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1.html
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: text/html; charset=UTF-8
-
-URL: http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2.html
-Method: GET
-Depth: 3
-Status: 200
-Content-Type: text/html; charset=UTF-8
 
 URL: http://testphp.vulnweb.com/secured/newuser.php
 Method: GET

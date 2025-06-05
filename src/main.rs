@@ -7,7 +7,6 @@ use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use tracing::{info, error, debug};
 use std::time::Duration;
-use std::collections::HashSet;
 
 use crate::core::crawler::{Crawler, DiscoveredUrl, Parameter, Form, CrawlerConfig, CrawlStrategy};
 use crate::plugin::{PluginManager, Target, TargetType};
@@ -44,9 +43,13 @@ struct Cli {
     #[arg(long, default_value = "100")]
     delay: u64,
 
-    /// Maximum number of concurrent requests
-    #[arg(long, default_value = "8")]
-    concurrency: usize,
+    /// Number of concurrent threads for crawling (default: 8). Controls how many pages are fetched in parallel.
+    #[arg(long = "crawler-threads", default_value = "8", help = "Number of concurrent threads for crawling (default: 8). Controls how many pages are fetched in parallel.")]
+    crawler_threads: usize,
+
+    /// Number of concurrent worker tasks for vulnerability scanning (default: 4). Controls how many scan jobs run in parallel.
+    #[arg(long = "scanner-workers", default_value = "4", help = "Number of concurrent worker tasks for vulnerability scanning (default: 4). Controls how many scan jobs run in parallel.")]
+    scanner_workers: usize,
 
     /// Request timeout in seconds
     #[arg(long, default_value = "30")]
@@ -115,7 +118,7 @@ async fn main() -> Result<()> {
         _ => CrawlStrategy::BFS,
     };
     config.delay = Duration::from_millis(cli.delay);
-    config.concurrency = cli.concurrency;
+    config.concurrency = cli.crawler_threads;
     config.timeout = Duration::from_secs(cli.timeout);
     config.respect_robots = cli.respect_robots;
 
@@ -182,22 +185,40 @@ async fn main() -> Result<()> {
             }),
         };
 
-        // Run selected plugins
+        // Run selected plugins with concurrency control
         pb.set_message("Running scanners...");
-        let results = plugin_manager.run_scan(&target).await?;
-
-        // Process and display results
+        use tokio::sync::Semaphore;
+        use std::sync::Arc;
+        let semaphore = Arc::new(Semaphore::new(cli.scanner_workers));
+        let mut handles = Vec::new();
+        let results = plugin_manager.list_plugins().await;
+        for plugin in results {
+            let permit = semaphore.clone().acquire_owned().await?;
+            let target = target.clone();
+            let plugin_name = plugin.name().to_string();
+            let pb = pb.clone();
+            handles.push(tokio::spawn(async move {
+                let res = plugin.scan(&target).await;
+                drop(permit);
+                (plugin_name, res)
+            }));
+        }
+        let results = futures::future::join_all(handles).await;
         pb.finish_with_message("Scan complete!");
-        
         info!("Scan Results:");
         info!("=============");
-
-        for (plugin_name, result) in results {
+        for result in results {
+            let (plugin_name, result) = match result {
+                Ok(pair) => pair,
+                Err(e) => {
+                    error!("Plugin task join error: {}", e);
+                    continue;
+                }
+            };
             match result {
                 Ok(scan_result) => {
                     info!("Plugin: {}", plugin_name);
                     info!("Found {} vulnerabilities:", scan_result.vulnerabilities.len());
-                    
                     for vuln in scan_result.vulnerabilities {
                         info!("");
                         info!("  Severity: {:?}", vuln.severity);

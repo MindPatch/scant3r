@@ -1,3 +1,1 @@
-pub mod crawler;
-
-pub use crawler::Crawler; 
+pub mod crawler; 
