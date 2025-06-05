@@ -146,3 +146,8 @@ urls.out
 run_tool.sh
 data.json
 demo*
+
+
+# Added by cargo
+
+/target

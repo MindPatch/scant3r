@@ -1,0 +1,29 @@
+[package]
+name = "scant3r"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Modern, modular vulnerability scanner written in Rust"
+
+[dependencies]
+tokio = { version = "1.37.0", features = ["full"] }
+clap = { version = "4.5.10", features = ["derive"] }
+serde = { version = "1.0.201", features = ["derive"] }
+serde_json = "1.0.117"
+reqwest = { version = "0.11.27", features = ["json", "blocking", "socks", "native-tls", "rustls-tls" ] }
+indicatif = "0.17.8"
+anyhow = "1.0"
+thiserror = "1.0"
+async-trait = "0.1.80"
+futures = "0.3"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+config = "0.13"
+url = { version = "2.5.0", features = ["serde"] }
+regex = "1.8"
+chrono = { version = "0.4.38", features = ["serde"] }
+scraper = "0.18.1"
+robotstxt = "0.3.0"
+parking_lot = "0.12.0"
+
+[dev-dependencies]
