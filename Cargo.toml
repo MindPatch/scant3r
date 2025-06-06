@@ -26,6 +26,9 @@ scraper = "0.18.1"
 robotstxt = "0.3.0"
 parking_lot = "0.12.0"
 percent-encoding = "2.3"
+base64 = "0.21"
+html5ever = "0.26"
+markup5ever_rcdom = "0.2"
 
 [dev-dependencies]
 
@@ -41,3 +44,10 @@ thiserror = "1.0"
 tracing = "0.1"
 regex = "1.10"
 percent-encoding = "2.3"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "scant3r"
+path = "src/main.rs"

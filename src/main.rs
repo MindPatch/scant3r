@@ -7,15 +7,17 @@ use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use tracing::{info, error, debug};
 use std::time::Duration;
+use std::collections::HashMap;
+use reqwest::header::HeaderMap;
 
 use crate::core::crawler::{Crawler, DiscoveredUrl, Parameter, Form, CrawlerConfig, CrawlStrategy};
 use crate::plugin::{PluginManager, Target, TargetType};
 use crate::plugin::scanners::{HttpScanner, XssScanner};
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Target to scan (URL, IP, or file path)
+    /// Target URL to scan
     #[arg(short, long)]
     target: String,
 
@@ -86,162 +88,80 @@ struct Cli {
     /// Export sitemap to file (supports json, xml, txt)
     #[arg(long)]
     export_sitemap: Option<String>,
+
+    /// HTTP proxy to use (e.g., http://127.0.0.1:8080)
+    #[arg(long)]
+    proxy: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Set up logging based on verbosity
-    let cli = Cli::parse();
-    let log_level = match cli.verbose {
-        0 => "warn",
-        1 => "info",
-        2 => "debug",
-        _ => "trace",
-    };
-    std::env::set_var("RUST_LOG", log_level);
+    // Initialize tracing
     tracing_subscriber::fmt::init();
 
-    // Create progress bar
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::default_spinner()
-            .template("{spinner:.green} [{elapsed_precise}] {msg}")
-            .unwrap(),
-    );
+    // Parse command line arguments
+    let cli = Cli::parse();
 
-    // Configure crawler
-    let mut config = CrawlerConfig::default();
-    config.max_depth = cli.depth;
-    config.max_pages = cli.max_pages;
-    config.strategy = match cli.strategy.to_uppercase().as_str() {
-        "DFS" => CrawlStrategy::DFS,
-        _ => CrawlStrategy::BFS,
+    // Create crawler configuration
+    let crawler_config = crate::core::crawler::CrawlerConfig {
+        max_depth: cli.depth,
+        max_pages: cli.max_pages,
+        strategy: match cli.strategy.to_uppercase().as_str() {
+            "DFS" => CrawlStrategy::DFS,
+            _ => CrawlStrategy::BFS,
+        },
+        delay: Duration::from_millis(cli.delay),
+        concurrency: cli.crawler_threads,
+        timeout: Duration::from_secs(cli.timeout),
+        respect_robots: cli.respect_robots,
+        allowed_domains: cli.allowed_domains.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+        excluded_paths: cli.excluded_paths.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+        excluded_extensions: cli.excluded_extensions.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+        proxy: cli.proxy.clone(),
+        custom_headers: Some(HeaderMap::new()),
+        max_retries: 3,
+        user_agent: "scant3r/0.1.0".to_string(),
     };
-    config.delay = Duration::from_millis(cli.delay);
-    config.concurrency = cli.crawler_threads;
-    config.timeout = Duration::from_secs(cli.timeout);
-    config.respect_robots = cli.respect_robots;
 
-    // Parse allowed domains
-    if let Some(domains) = cli.allowed_domains {
-        config.allowed_domains = domains.split(',')
-            .map(|s| s.trim().to_string())
-            .collect();
-    }
+    // Create crawler
+    let mut crawler = Crawler::new(&cli.target, crawler_config)?;
 
-    // Parse excluded paths
-    if let Some(paths) = cli.excluded_paths {
-        config.excluded_paths = paths.split(',')
-            .map(|s| s.trim().to_string())
-            .collect();
-    }
+    // Create plugin manager
+    let mut manager = PluginManager::new();
 
-    // Parse excluded extensions
-    if let Some(exts) = cli.excluded_extensions {
-        config.excluded_extensions = exts.split(',')
-            .map(|s| s.trim().to_string())
-            .collect();
-    }
+    // Register plugins with proxy configuration
+    manager.register_plugin(Box::new(HttpScanner::new().with_proxy(cli.proxy.clone()))).await?;
+    manager.register_plugin(Box::new(XssScanner::new().with_proxy(cli.proxy.clone()))).await?;
 
-    // Crawl the target
-    pb.set_message("Crawling target...");
-    let mut crawler = Crawler::new(&cli.target, config)?;
+    // Run crawler
     let discovered_urls = crawler.crawl().await?;
-    
-    info!("Discovered {} URLs", discovered_urls.len());
 
-    // Export sitemap if requested
-    if let Some(export_path) = cli.export_sitemap {
-        pb.set_message("Exporting sitemap...");
-        export_sitemap(&discovered_urls, &export_path)?;
-        info!("Sitemap exported to {}", export_path);
-    }
+    // Create target with discovered URLs
+    let target = Target {
+        raw: cli.target,
+        target_type: TargetType::Url,
+        metadata: serde_json::json!({
+            "discovered_urls": discovered_urls,
+        }),
+    };
 
-    // Show site tree if requested
-    if cli.show_sitetree {
-        info!("Building site tree...");
-        let tree = build_site_tree(&discovered_urls);
-        info!("Site Tree:");
-        info!("==========");
-        log_site_tree(&tree, 0);
-    }
+    // Run plugins
+    let results = manager.run_scan(&target).await?;
 
-    // Skip vulnerability scanning if in crawler-only mode
-    if !cli.crawler_only {
-        // Initialize plugin manager
-        let plugin_manager = PluginManager::new();
-
-        // Register plugins
-        pb.set_message("Registering plugins...");
-        plugin_manager.register_plugin(Box::new(XssScanner::new())).await?;
-        plugin_manager.register_plugin(Box::new(HttpScanner::new())).await?;
-
-        // Create target
-        let target = Target {
-            raw: cli.target.clone(),
-            target_type: TargetType::Url,
-            metadata: serde_json::json!({
-                "discovered_urls": discovered_urls,
-            }),
-        };
-
-        // Run selected plugins with concurrency control
-        pb.set_message("Running scanners...");
-        use tokio::sync::Semaphore;
-        use std::sync::Arc;
-        let semaphore = Arc::new(Semaphore::new(cli.scanner_workers));
-        let mut handles = Vec::new();
-        let results = plugin_manager.list_plugins().await;
-        for plugin in results {
-            let permit = semaphore.clone().acquire_owned().await?;
-            let target = target.clone();
-            let plugin_name = plugin.name().to_string();
-            let pb = pb.clone();
-            handles.push(tokio::spawn(async move {
-                let res = plugin.scan(&target).await;
-                drop(permit);
-                (plugin_name, res)
-            }));
-        }
-        let results = futures::future::join_all(handles).await;
-        pb.finish_with_message("Scan complete!");
-        info!("Scan Results:");
-        info!("=============");
-        for result in results {
-            let (plugin_name, result) = match result {
-                Ok(pair) => pair,
-                Err(e) => {
-                    error!("Plugin task join error: {}", e);
-                    continue;
-                }
-            };
-            match result {
-                Ok(scan_result) => {
-                    info!("Plugin: {}", plugin_name);
-                    info!("Found {} vulnerabilities:", scan_result.vulnerabilities.len());
-                    for vuln in scan_result.vulnerabilities {
-                        info!("");
-                        info!("  Severity: {:?}", vuln.severity);
-                        info!("  Name: {}", vuln.name);
-                        info!("  Description: {}", vuln.description);
-                        if let Some(cve_id) = vuln.cve_id {
-                            info!("  CVE: {}", cve_id);
-                        }
-                        if let Some(metadata) = vuln.metadata.as_object() {
-                            info!("  Details:");
-                            for (key, value) in metadata {
-                                info!("    {}: {}", key, value);
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!("Plugin {} failed: {}", plugin_name, e);
-                }
+    // Print results
+    for result in results {
+        println!("Plugin: {}", result.plugin_name);
+        println!("Success: {}", result.success);
+        println!("Vulnerabilities:");
+        for vuln in result.vulnerabilities {
+            println!("  - {} (Severity: {:?})", vuln.name, vuln.severity);
+            println!("    Description: {}", vuln.description);
+            if let Some(cve) = vuln.cve_id {
+                println!("    CVE: {}", cve);
             }
+            println!("    Metadata: {}", serde_json::to_string_pretty(&vuln.metadata)?);
         }
-    } else {
-        pb.finish_with_message("Crawl complete!");
+        println!();
     }
 
     Ok(())

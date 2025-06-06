@@ -36,6 +36,7 @@ pub struct CrawlerConfig {
     pub excluded_extensions: HashSet<String>,
     pub max_pages: Option<usize>,
     pub user_agent: String,
+    pub proxy: Option<String>,
 }
 
 impl Default for CrawlerConfig {
@@ -54,6 +55,7 @@ impl Default for CrawlerConfig {
             excluded_extensions: HashSet::new(),
             max_pages: None,
             user_agent: "scant3r".to_string(),
+            proxy: None,
         }
     }
 }
@@ -97,9 +99,11 @@ pub struct Form {
 
 /// Crawler for discovering URLs and parameters
 pub struct Crawler {
-    client: Client,
+    target: String,
     config: CrawlerConfig,
+    client: Client,
     visited_urls: HashSet<String>,
+    discovered_urls: Vec<DiscoveredUrl>,
     base_url: Url,
     queue: VecDeque<(Url, usize, Option<Url>)>,
     robots_txt_cache: Arc<Mutex<HashMap<String, String>>>,
@@ -108,9 +112,11 @@ pub struct Crawler {
 impl Clone for Crawler {
     fn clone(&self) -> Self {
         Self {
-            client: self.client.clone(),
+            target: self.target.clone(),
             config: self.config.clone(),
+            client: self.client.clone(),
             visited_urls: self.visited_urls.clone(),
+            discovered_urls: self.discovered_urls.clone(),
             base_url: self.base_url.clone(),
             queue: self.queue.clone(),
             robots_txt_cache: self.robots_txt_cache.clone(),
@@ -119,8 +125,26 @@ impl Clone for Crawler {
 }
 
 impl Crawler {
-    pub fn new(base_url: &str, config: CrawlerConfig) -> Result<Self> {
-        let base_url = Url::parse(base_url)?;
+    pub fn new(target: &str, config: CrawlerConfig) -> Result<Self> {
+        let client = if let Some(proxy_url) = &config.proxy {
+            Client::builder()
+                .proxy(reqwest::Proxy::http(proxy_url).unwrap_or_else(|_| {
+                    tracing::warn!("Failed to set HTTP proxy, falling back to direct connection");
+                    reqwest::Proxy::all("").unwrap_or_else(|_| {
+                        tracing::warn!("Failed to create direct proxy, using default client");
+                        reqwest::Proxy::custom(|_| None::<String>)
+                    })
+                }))
+                .build()
+                .unwrap_or_else(|_| {
+                    tracing::warn!("Failed to build client with proxy, falling back to default client");
+                    Client::new()
+                })
+        } else {
+            Client::new()
+        };
+
+        let base_url = Url::parse(target)?;
         let domain = base_url.host_str().unwrap_or("").to_string();
         
         // Add base domain to allowed domains if empty
@@ -130,11 +154,11 @@ impl Crawler {
         }
 
         Ok(Self {
-            client: Client::builder()
-                .timeout(config.timeout)
-                .build()?,
+            target: target.to_string(),
             config,
+            client,
             visited_urls: HashSet::new(),
+            discovered_urls: Vec::new(),
             base_url,
             queue: VecDeque::new(),
             robots_txt_cache: Arc::new(Mutex::new(HashMap::new())),

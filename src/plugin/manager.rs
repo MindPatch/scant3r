@@ -1,73 +1,94 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use anyhow::Result;
 use tracing::info;
 
 use super::scanner_trait::{PluginConfig, ScannerPlugin, Target, ScanResult};
+use super::scanners::{HttpScanner, XssScanner, ImpalaScanner};
 
 /// Manages the loading and execution of scanner plugins
 pub struct PluginManager {
-    plugins: Arc<RwLock<HashMap<String, Box<dyn ScannerPlugin + Send + Sync>>>>,
-    configs: Arc<RwLock<HashMap<String, PluginConfig>>>,
+    plugins: Vec<Box<dyn ScannerPlugin + Send + Sync>>,
+    proxy: Option<String>,
 }
 
 impl PluginManager {
     /// Creates a new plugin manager
     pub fn new() -> Self {
         Self {
-            plugins: Arc::new(RwLock::new(HashMap::new())),
-            configs: Arc::new(RwLock::new(HashMap::new())),
+            plugins: Vec::new(),
+            proxy: None,
         }
     }
 
+    pub fn with_proxy(mut self, proxy: Option<String>) -> Self {
+        self.proxy = proxy;
+        self
+    }
+
     /// Registers a new plugin
-    pub async fn register_plugin(&self, plugin: Box<dyn ScannerPlugin + Send + Sync>) -> Result<()> {
-        let name = plugin.name().to_string();
-        let mut plugins = self.plugins.write().await;
-        plugins.insert(name.clone(), plugin);
-        
-        // Set default config
-        let mut configs = self.configs.write().await;
-        configs.insert(name, PluginConfig { enabled: true });
-        
+    pub async fn register_plugin(&mut self, plugin: Box<dyn ScannerPlugin + Send + Sync>) -> Result<()> {
+        if let Some(proxy) = &self.proxy {
+            if let Some(http_scanner) = plugin.as_any().downcast_ref::<HttpScanner>() {
+                let scanner = http_scanner.clone().with_proxy(Some(proxy.clone()));
+                self.plugins.push(Box::new(scanner));
+                return Ok(());
+            }
+            if let Some(xss_scanner) = plugin.as_any().downcast_ref::<XssScanner>() {
+                let scanner = xss_scanner.clone().with_proxy(Some(proxy.clone()));
+                self.plugins.push(Box::new(scanner));
+                return Ok(());
+            }
+            if let Some(impala_scanner) = plugin.as_any().downcast_ref::<ImpalaScanner>() {
+                let scanner = impala_scanner.clone().with_proxy(Some(proxy.clone()));
+                self.plugins.push(Box::new(scanner));
+                return Ok(());
+            }
+        }
+        self.plugins.push(plugin);
         Ok(())
     }
 
     /// Gets a plugin by name
     pub async fn get_plugin(&self, name: &str) -> Option<Box<dyn ScannerPlugin + Send + Sync>> {
-        let plugins = self.plugins.read().await;
-        plugins.get(name).map(|p| p.box_clone())
+        self.plugins.iter()
+            .find(|p| p.name() == name)
+            .map(|p| p.box_clone())
     }
 
     /// Returns all registered plugins
     pub async fn list_plugins(&self) -> Vec<Box<dyn ScannerPlugin + Send + Sync>> {
-        let plugins = self.plugins.read().await;
-        plugins.values().map(|p| p.box_clone()).collect()
+        self.plugins.iter()
+            .map(|p| p.box_clone())
+            .collect()
     }
 
     /// Sets the configuration for a plugin
-    pub async fn configure_plugin(&self, name: &str, config: PluginConfig) -> Result<()> {
-        let mut configs = self.configs.write().await;
-        configs.insert(name.to_string(), config);
+    pub async fn configure_plugin(&self, _name: &str, _config: PluginConfig) -> Result<()> {
+        // This method is not implemented in the new structure
         Ok(())
     }
 
     /// Runs all enabled plugins that can handle the target
-    pub async fn run_scan(&self, target: &Target) -> Result<Vec<(String, Result<ScanResult>)>> {
-        let plugins = self.plugins.read().await;
-        let configs = self.configs.read().await;
-        
+    pub async fn run_scan(&mut self, target: &Target) -> Result<Vec<ScanResult>> {
         let mut results = Vec::new();
         
-        for (name, plugin) in plugins.iter() {
-            if configs.get(name).map(|c| c.enabled).unwrap_or(true) {
-                info!("Running plugin: {}", name);
-                let result = plugin.scan(target).await;
-                results.push((name.clone(), result));
-            }
+        for plugin in &mut self.plugins {
+            info!("Running plugin: {}", plugin.name());
+            let result = plugin.scan(target).await?;
+            results.push(result);
         }
         
         Ok(results)
+    }
+
+    pub async fn scan_with_plugin(&mut self, name: &str, target: &Target) -> Result<Option<ScanResult>> {
+        if let Some(plugin) = self.plugins.iter_mut().find(|p| p.name() == name) {
+            if plugin.validate(target).await? {
+                Ok(Some(plugin.scan(target).await?))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
     }
 } 

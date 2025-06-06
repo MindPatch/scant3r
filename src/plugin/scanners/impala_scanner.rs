@@ -4,11 +4,13 @@ use std::fmt::Debug;
 use anyhow::Result;
 use reqwest::Client;
 use url::Url;
+use std::any::Any;
 
 /// Scanner for detecting exposed Apache Impala instances
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImpalaScanner {
     client: Client,
+    proxy: Option<String>,
 }
 
 impl ImpalaScanner {
@@ -18,7 +20,32 @@ impl ImpalaScanner {
                 .redirect(reqwest::redirect::Policy::limited(2))
                 .build()
                 .unwrap(),
+            proxy: None,
         }
+    }
+
+    pub fn with_proxy(mut self, proxy: Option<String>) -> Self {
+        if let Some(proxy_url) = proxy {
+            self.proxy = Some(proxy_url.clone());
+            self.client = Client::builder()
+                .redirect(reqwest::redirect::Policy::limited(2))
+                .proxy(reqwest::Proxy::http(&proxy_url).unwrap_or_else(|_| {
+                    tracing::warn!("Failed to set HTTP proxy, falling back to direct connection");
+                    reqwest::Proxy::all("").unwrap_or_else(|_| {
+                        tracing::warn!("Failed to create direct proxy, using default client");
+                        reqwest::Proxy::custom(|_| None::<String>)
+                    })
+                }))
+                .build()
+                .unwrap_or_else(|_| {
+                    tracing::warn!("Failed to build client with proxy, falling back to default client");
+                    Client::builder()
+                        .redirect(reqwest::redirect::Policy::limited(2))
+                        .build()
+                        .unwrap()
+                });
+        }
+        self
     }
 }
 
@@ -43,7 +70,7 @@ impl ScannerPlugin for ImpalaScanner {
         }
     }
 
-    async fn scan(&self, target: &Target) -> Result<ScanResult> {
+    async fn scan(&mut self, target: &Target) -> Result<ScanResult> {
         let url = Url::parse(&target.raw)?;
         let mut vulnerabilities = Vec::new();
 
@@ -90,5 +117,9 @@ impl ScannerPlugin for ImpalaScanner {
 
     fn box_clone(&self) -> Box<dyn ScannerPlugin + Send + Sync> {
         Box::new(Self::new())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 } 
