@@ -55,7 +55,10 @@ impl CVEFeed {
         Self {
             config,
             parser,
-            client: Client::new(),
+            client: Client::builder()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .unwrap(),
             last_sync: None,
         }
     }

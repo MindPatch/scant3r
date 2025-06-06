@@ -136,32 +136,46 @@ async fn main() -> Result<()> {
     // Run crawler
     let discovered_urls = crawler.crawl().await?;
 
-    // Create target with discovered URLs
-    let target = Target {
-        raw: cli.target,
-        target_type: TargetType::Url,
-        metadata: serde_json::json!({
-            "discovered_urls": discovered_urls,
-        }),
-    };
+    // Export sitemap if requested
+    if let Some(path) = &cli.export_sitemap {
+        export_sitemap(&discovered_urls, path)?;
+    }
 
-    // Run plugins
-    let results = manager.run_scan(&target).await?;
+    // Show site tree if requested
+    if cli.show_sitetree {
+        let tree = build_site_tree(&discovered_urls);
+        log_site_tree(&tree, 0);
+    }
 
-    // Print results
-    for result in results {
-        println!("Plugin: {}", result.plugin_name);
-        println!("Success: {}", result.success);
-        println!("Vulnerabilities:");
-        for vuln in result.vulnerabilities {
-            println!("  - {} (Severity: {:?})", vuln.name, vuln.severity);
-            println!("    Description: {}", vuln.description);
-            if let Some(cve) = vuln.cve_id {
-                println!("    CVE: {}", cve);
+    // Skip vulnerability scanning if crawler_only is set
+    if !cli.crawler_only {
+        // Create target with discovered URLs
+        let target = Target {
+            raw: cli.target,
+            target_type: TargetType::Url,
+            metadata: serde_json::json!({
+                "discovered_urls": discovered_urls,
+            }),
+        };
+
+        // Run plugins
+        let results = manager.run_scan(&target).await?;
+
+        // Print results
+        for result in results {
+            println!("Plugin: {}", result.plugin_name);
+            println!("Success: {}", result.success);
+            println!("Vulnerabilities:");
+            for vuln in result.vulnerabilities {
+                println!("  - {} (Severity: {:?})", vuln.name, vuln.severity);
+                println!("    Description: {}", vuln.description);
+                if let Some(cve) = vuln.cve_id {
+                    println!("    CVE: {}", cve);
+                }
+                println!("    Metadata: {}", serde_json::to_string_pretty(&vuln.metadata)?);
             }
-            println!("    Metadata: {}", serde_json::to_string_pretty(&vuln.metadata)?);
+            println!();
         }
-        println!();
     }
 
     Ok(())

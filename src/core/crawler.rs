@@ -127,21 +127,34 @@ impl Clone for Crawler {
 impl Crawler {
     pub fn new(target: &str, config: CrawlerConfig) -> Result<Self> {
         let client = if let Some(proxy_url) = &config.proxy {
-            Client::builder()
-                .proxy(reqwest::Proxy::http(proxy_url).unwrap_or_else(|_| {
-                    tracing::warn!("Failed to set HTTP proxy, falling back to direct connection");
-                    reqwest::Proxy::all("").unwrap_or_else(|_| {
-                        tracing::warn!("Failed to create direct proxy, using default client");
-                        reqwest::Proxy::custom(|_| None::<String>)
-                    })
-                }))
-                .build()
-                .unwrap_or_else(|_| {
-                    tracing::warn!("Failed to build client with proxy, falling back to default client");
-                    Client::new()
-                })
+            let mut builder = Client::builder()
+                .danger_accept_invalid_certs(true);
+
+            // Configure both HTTP and HTTPS proxies
+            if let Ok(proxy) = reqwest::Proxy::http(proxy_url) {
+                builder = builder.proxy(proxy);
+            } else {
+                tracing::warn!("Failed to set HTTP proxy: {}", proxy_url);
+            }
+
+            if let Ok(proxy) = reqwest::Proxy::https(proxy_url) {
+                builder = builder.proxy(proxy);
+            } else {
+                tracing::warn!("Failed to set HTTPS proxy: {}", proxy_url);
+            }
+
+            builder.build().unwrap_or_else(|_| {
+                tracing::warn!("Failed to build client with proxy, falling back to default client");
+                Client::builder()
+                    .danger_accept_invalid_certs(true)
+                    .build()
+                    .unwrap()
+            })
         } else {
-            Client::new()
+            Client::builder()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .unwrap()
         };
 
         let base_url = Url::parse(target)?;

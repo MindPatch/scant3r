@@ -17,6 +17,7 @@ impl ImpalaScanner {
     pub fn new() -> Self {
         Self {
             client: Client::builder()
+                .danger_accept_invalid_certs(true)
                 .redirect(reqwest::redirect::Policy::limited(2))
                 .build()
                 .unwrap(),
@@ -27,23 +28,32 @@ impl ImpalaScanner {
     pub fn with_proxy(mut self, proxy: Option<String>) -> Self {
         if let Some(proxy_url) = proxy {
             self.proxy = Some(proxy_url.clone());
-            self.client = Client::builder()
-                .redirect(reqwest::redirect::Policy::limited(2))
-                .proxy(reqwest::Proxy::http(&proxy_url).unwrap_or_else(|_| {
-                    tracing::warn!("Failed to set HTTP proxy, falling back to direct connection");
-                    reqwest::Proxy::all("").unwrap_or_else(|_| {
-                        tracing::warn!("Failed to create direct proxy, using default client");
-                        reqwest::Proxy::custom(|_| None::<String>)
-                    })
-                }))
-                .build()
-                .unwrap_or_else(|_| {
-                    tracing::warn!("Failed to build client with proxy, falling back to default client");
-                    Client::builder()
-                        .redirect(reqwest::redirect::Policy::limited(2))
-                        .build()
-                        .unwrap()
-                });
+            let mut builder = Client::builder()
+                .danger_accept_invalid_certs(true)
+                .redirect(reqwest::redirect::Policy::limited(2));
+            
+            // Configure HTTP proxy
+            if let Ok(http_proxy) = reqwest::Proxy::http(&proxy_url) {
+                builder = builder.proxy(http_proxy);
+            } else {
+                tracing::warn!("Failed to set HTTP proxy");
+            }
+            
+            // Configure HTTPS proxy
+            if let Ok(https_proxy) = reqwest::Proxy::https(&proxy_url) {
+                builder = builder.proxy(https_proxy);
+            } else {
+                tracing::warn!("Failed to set HTTPS proxy");
+            }
+            
+            self.client = builder.build().unwrap_or_else(|_| {
+                tracing::warn!("Failed to build client with proxy, falling back to default client");
+                Client::builder()
+                    .danger_accept_invalid_certs(true)
+                    .redirect(reqwest::redirect::Policy::limited(2))
+                    .build()
+                    .unwrap()
+            });
         }
         self
     }
