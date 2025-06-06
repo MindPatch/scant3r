@@ -1,3 +1,4 @@
 pub mod crawler;
+pub mod ajax_crawler;
 
-pub use crawler::*; 
+ 

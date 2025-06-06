@@ -29,6 +29,9 @@ percent-encoding = "2.3"
 base64 = "0.21"
 html5ever = "0.26"
 markup5ever_rcdom = "0.2"
+fantoccini = "0.18"
+rand = "0.8.5"
+sha2 = "0.10.8"
 
 [dev-dependencies]
 

@@ -5,93 +5,101 @@ mod cve;
 use anyhow::Result;
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
-use tracing::{info, error, debug};
+use tracing::{info, debug};
 use std::time::Duration;
-use std::collections::HashMap;
 use reqwest::header::HeaderMap;
 
 use crate::core::crawler::{Crawler, DiscoveredUrl, Parameter, Form, CrawlerConfig, CrawlStrategy};
+use crate::core::ajax_crawler::{AjaxCrawler, AjaxCrawlerConfig};
 use crate::plugin::{PluginManager, Target, TargetType};
 use crate::plugin::scanners::{HttpScanner, XssScanner};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Cli {
+pub struct Cli {
     /// Target URL to scan
     #[arg(short, long)]
-    target: String,
+    pub target: String,
 
     /// Configuration file path
     #[arg(short, long)]
-    config: Option<String>,
+    pub config: Option<String>,
 
     /// Verbosity (-v, -vv, -vvv)
     #[arg(short, long, action = clap::ArgAction::Count)]
-    verbose: u8,
+    pub verbose: u8,
 
     /// Maximum crawl depth
     #[arg(short, long, default_value = "3")]
-    depth: usize,
+    pub depth: usize,
 
     /// Maximum number of pages to crawl
     #[arg(long)]
-    max_pages: Option<usize>,
+    pub max_pages: Option<usize>,
 
     /// Crawling strategy (BFS or DFS)
     #[arg(long, default_value = "BFS")]
-    strategy: String,
+    pub strategy: String,
 
     /// Delay between requests in milliseconds
     #[arg(long, default_value = "100")]
-    delay: u64,
+    pub delay: u64,
 
     /// Number of concurrent threads for crawling (default: 8). Controls how many pages are fetched in parallel.
     #[arg(long = "crawler-threads", default_value = "8", help = "Number of concurrent threads for crawling (default: 8). Controls how many pages are fetched in parallel.")]
-    crawler_threads: usize,
+    pub crawler_threads: usize,
 
     /// Number of concurrent worker tasks for vulnerability scanning (default: 4). Controls how many scan jobs run in parallel.
     #[arg(long = "scanner-workers", default_value = "4", help = "Number of concurrent worker tasks for vulnerability scanning (default: 4). Controls how many scan jobs run in parallel.")]
-    scanner_workers: usize,
+    pub scanner_workers: usize,
 
     /// Request timeout in seconds
     #[arg(long, default_value = "30")]
-    timeout: u64,
+    pub timeout: u64,
 
     /// Respect robots.txt
     #[arg(long)]
-    respect_robots: bool,
+    pub respect_robots: bool,
 
     /// Comma-separated list of allowed domains
     #[arg(long)]
-    allowed_domains: Option<String>,
+    pub allowed_domains: Option<String>,
 
     /// Comma-separated list of excluded paths
     #[arg(long)]
-    excluded_paths: Option<String>,
+    pub excluded_paths: Option<String>,
 
     /// Comma-separated list of excluded file extensions
     #[arg(long)]
-    excluded_extensions: Option<String>,
+    pub excluded_extensions: Option<String>,
 
     /// Comma-separated list of plugins to use
     #[arg(short, long, default_value = "xss_scanner,http_scanner")]
-    plugins: String,
+    pub plugins: String,
 
     /// Show site tree after crawling
     #[arg(long)]
-    show_sitetree: bool,
+    pub show_sitetree: bool,
 
     /// Crawler-only mode (skip vulnerability scanning)
     #[arg(long)]
-    crawler_only: bool,
+    pub crawler_only: bool,
 
     /// Export sitemap to file (supports json, xml, txt)
     #[arg(long)]
-    export_sitemap: Option<String>,
+    pub export_sitemap: Option<String>,
 
     /// HTTP proxy to use (e.g., http://127.0.0.1:8080)
     #[arg(long)]
-    proxy: Option<String>,
+    pub proxy: Option<String>,
+
+    /// Use AJAX crawling (requires Chrome/Chromium and ChromeDriver)
+    #[arg(long)]
+    pub ajax_crawl: bool,
+
+    /// Run browser in non-headless mode (only applies to AJAX crawling)
+    #[arg(long)]
+    pub no_headless: bool,
 }
 
 #[tokio::main]
@@ -102,29 +110,72 @@ async fn main() -> Result<()> {
     // Parse command line arguments
     let cli = Cli::parse();
 
-    // Create crawler configuration
-    let crawler_config = crate::core::crawler::CrawlerConfig {
-        max_depth: cli.depth,
-        max_pages: cli.max_pages,
-        strategy: match cli.strategy.to_uppercase().as_str() {
-            "DFS" => CrawlStrategy::DFS,
-            _ => CrawlStrategy::BFS,
-        },
-        delay: Duration::from_millis(cli.delay),
-        concurrency: cli.crawler_threads,
-        timeout: Duration::from_secs(cli.timeout),
-        respect_robots: cli.respect_robots,
-        allowed_domains: cli.allowed_domains.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
-        excluded_paths: cli.excluded_paths.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
-        excluded_extensions: cli.excluded_extensions.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
-        proxy: cli.proxy.clone(),
-        custom_headers: Some(HeaderMap::new()),
-        max_retries: 3,
-        user_agent: "scant3r/0.1.0".to_string(),
-    };
+    let discovered_urls = if cli.ajax_crawl {
+        // Create AJAX crawler configuration
+        let ajax_config = AjaxCrawlerConfig {
+            max_depth: cli.depth,
+            max_pages: cli.max_pages,
+            allowed_domains: cli.allowed_domains.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+            excluded_paths: cli.excluded_paths.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+            excluded_extensions: cli.excluded_extensions.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+            delay: Duration::from_millis(cli.delay),
+            proxy: cli.proxy.clone(),
+            headless: !cli.no_headless,
+        };
 
-    // Create crawler
-    let mut crawler = Crawler::new(&cli.target, crawler_config)?;
+        // Create progress bar for AJAX crawling
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} [{elapsed_precise}] {msg}")
+                .unwrap()
+        );
+        pb.set_message("Starting AJAX crawler...");
+
+        // Create and run AJAX crawler
+        let mut ajax_crawler = AjaxCrawler::new(&cli.target, ajax_config).await?;
+        let urls = ajax_crawler.crawl(&cli.target).await?;
+        
+        pb.finish_with_message(format!("AJAX crawling complete. Found {} URLs", urls.len()));
+        urls
+    } else {
+        // Create regular crawler configuration
+        let crawler_config = CrawlerConfig {
+            max_depth: cli.depth,
+            max_pages: cli.max_pages,
+            strategy: match cli.strategy.to_uppercase().as_str() {
+                "DFS" => CrawlStrategy::DFS,
+                _ => CrawlStrategy::BFS,
+            },
+            delay: Duration::from_millis(cli.delay),
+            concurrency: cli.crawler_threads,
+            timeout: Duration::from_secs(cli.timeout),
+            respect_robots: cli.respect_robots,
+            allowed_domains: cli.allowed_domains.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+            excluded_paths: cli.excluded_paths.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+            excluded_extensions: cli.excluded_extensions.map(|s| s.split(',').map(|s| s.trim().to_string()).collect()).unwrap_or_default(),
+            proxy: cli.proxy.clone(),
+            custom_headers: Some(HeaderMap::new()),
+            max_retries: 3,
+            user_agent: "scant3r/0.1.0".to_string(),
+        };
+
+        // Create progress bar for regular crawling
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} [{elapsed_precise}] {msg}")
+                .unwrap()
+        );
+        pb.set_message("Starting crawler...");
+
+        // Create and run regular crawler
+        let mut crawler = Crawler::new(&cli.target, crawler_config)?;
+        let urls = crawler.crawl().await?;
+        
+        pb.finish_with_message(format!("Crawling complete. Found {} URLs", urls.len()));
+        urls
+    };
 
     // Create plugin manager
     let mut manager = PluginManager::new();
@@ -133,17 +184,30 @@ async fn main() -> Result<()> {
     manager.register_plugin(Box::new(HttpScanner::new().with_proxy(cli.proxy.clone()))).await?;
     manager.register_plugin(Box::new(XssScanner::new().with_proxy(cli.proxy.clone()))).await?;
 
-    // Run crawler
-    let discovered_urls = crawler.crawl().await?;
-
     // Export sitemap if requested
     if let Some(path) = &cli.export_sitemap {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} [{elapsed_precise}] {msg}")
+                .unwrap()
+        );
+        pb.set_message(format!("Exporting sitemap to {}...", path));
         export_sitemap(&discovered_urls, path)?;
+        pb.finish_with_message(format!("Sitemap exported to {}", path));
     }
 
     // Show site tree if requested
     if cli.show_sitetree {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} [{elapsed_precise}] {msg}")
+                .unwrap()
+        );
+        pb.set_message("Building site tree...");
         let tree = build_site_tree(&discovered_urls);
+        pb.finish_with_message("Site tree built");
         log_site_tree(&tree, 0);
     }
 
@@ -158,12 +222,22 @@ async fn main() -> Result<()> {
             }),
         };
 
+        // Create progress bar for scanning
+        let scan_pb = ProgressBar::new_spinner();
+        scan_pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.yellow} [{elapsed_precise}] {msg}")
+                .unwrap()
+        );
+        scan_pb.set_message("Starting vulnerability scan...");
+
         // Run plugins
         let results = manager.run_scan(&target).await?;
+        scan_pb.finish_with_message("Vulnerability scan complete");
 
         // Print results
         for result in results {
-            println!("Plugin: {}", result.plugin_name);
+            println!("\nPlugin: {}", result.plugin_name);
             println!("Success: {}", result.success);
             println!("Vulnerabilities:");
             for vuln in result.vulnerabilities {
@@ -174,7 +248,6 @@ async fn main() -> Result<()> {
                 }
                 println!("    Metadata: {}", serde_json::to_string_pretty(&vuln.metadata)?);
             }
-            println!();
         }
     }
 
