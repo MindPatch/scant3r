@@ -7,7 +7,7 @@
 <h1 align="center">
   <br>
   <br>
-  ScanT3r <br><h4 align="center">Save your scripting time</h4>
+  ScanT3r <br><h4 align="center">Fast &amp; flexible DAST CLI tool</h4>
   <br>  
 </h1>
 
@@ -36,120 +36,111 @@
 
 
 
-### :warning: This project is no longer supported
-You should use the Lotus project (https://github.com/rusty-sec/lotus/) instead of scant3r, since scant3r had been developed with many errors that will take more time to fix and scant3r is very slow compared to Lotus.
-
-
 ### What's this?
-this is a module-based web automation tool that I made for saving my scripting
-time by providing some utilizes that every web pentester needs in his automation script
-instead of focusing on ( logger, parsers, output function, cmd args, multi-threading),
-just write the logic of your scanning idea with scant3r utils without caring
-about these things, you can find callback/parsing/logging utils and output functions, Also we will add Restful API soon <br>
-what if you need to add a new Command option to scant3r for your script? <br>
-easy without writing any code just open the `conf/opts.YAML file and you will find all options of scant3r so you can change and add what you want;D
+**ScanT3r** is a fast and flexible **DAST** (Dynamic Application Security Testing)
+command-line tool written in **Rust**. It scans running web applications for
+vulnerabilities from the outside — no source code needed: point it at a URL
+(or a list of URLs) and its modules probe the target with real HTTP traffic,
+analyze the responses, and report exploitable findings.
 
+### Why ScanT3r?
 
-### why should I use it ?
-the short answer is to save your time, as a security guy you don't need to
-learn more about " how to write a perfect CLI script " you just need to
-understand the logic of your script <br> if you need to write something like SSRF
-CVE scanner, instead of searching "How can I call interact.sh", "how to fix this
-code issue", "how can I parse this' <br> and after getting the answer you will get
-some cool errors in your code and you will find yourself needing more time to
-search and fix these bugs <br>
+- **Fast** — an async Rust engine (tokio + reqwest) fires hundreds of concurrent
+  requests with connection reuse, bounded by a single `--workers` flag. Scans
+  that took minutes in the old Python version finish in seconds.
+- **Flexible** — a module-based architecture: enable only the checks you need
+  (`-m xss,ssti`) or run everything (`-m all`). Custom headers, cookies, proxy
+  (Burp-ready), HTTP methods, JSON bodies, rate-limiting delays and timeouts are
+  all first-class CLI options.
+- **OOB-ready** — built-in out-of-band (interact.sh / odiss.eu) callback support
+  for detecting blind vulnerabilities like SSRF and out-of-band resource loads.
+- **Pipeline-friendly** — reads targets from stdin, `-u` or `-l`, and writes
+  structured JSON reports (`-o report.json`) that slot straight into your
+  CI/CD or bug-bounty automation.
 
-this is a waste of time for you, so this project will help to
-save more and more, just take a look at the examples modules and read the
-official documentation (unavailable yet), or just open an issue with a
-Feature request and we will write your script with our hands
+Adding a new check means implementing one Rust trait (`src/modules/mod.rs`) and
+registering it — the engine takes care of concurrency, HTTP, logging, progress
+and reporting. New CLI option? One clap attribute in `src/cli.rs`, resolved in
+`src/opts.rs`.
 
 ### Modules
 
-this the modules we providing for our community for you need new module open an issue with `Feature request
-` template 
+Built-in detection modules (need a new one? open an issue with the `Feature request` template)
 
 | module         | Short description                                           |
 | :------------- | :-------------                                               |
-| **xss** | xss scanner for the ( ATTR_NAME, ATTR_VALUE , Comments, TAG_NAME ) |
-| **req_callback**     | Finds Out-of-band Resources parameters |
-| **ssti**       | Finds Server-side Template injection                                         |
+| **xss** | reflected XSS scanner — detects reflection context (ATTR_NAME, ATTR_VALUE, Comments, TAG_NAME, text) and confirms with context-aware payloads |
+| **req_callback**     | finds out-of-band resource load parameters (blind SSRF-style) via interact.sh callbacks |
+| **ssti**       | finds Server-Side Template Injection                                         |
 | **firebase**   | checks for public firebase databases (write/read) permission  |
 
 Official documentation: https://scant3r.knas.me 
 
 #### Requirements
-* python >= 3.10
-* pip
+* Rust toolchain (cargo) >= 1.75
 * Git
 
 #### install
 * Unix & MS-DOS
 
 ```bash
-$ pip3 install git+https://github.com/knassar702/scant3r
+$ git clone https://github.com/knassar702/scant3r && cd scant3r
+$ cargo build --release
+$ ./target/release/scant3r --help
+# or install it into your cargo bin directory:
+$ cargo install --path .
 $ scant3r --help
-usage: scant3r [-h] [-e EXIT_AFTER] [-ct CALLBACK_TIME] [-c] [-o OUTPUT_FILE]
-               [-H HEADERS] [-C COOKIES] [-v LOG_MODE] [-s DELAY] [-M METHODS]
-               [-m MODULES] [-O] [-P LORSRF_PARAMETERS] [-l TARGETLIST] [-g] [-j]
-               [-p PROXY] [-r] [-b BLINDXSS] [-x HOST] [-R] [-w THREADS]
-               [-t TIMEOUT]
+Usage: scant3r [OPTIONS]
 
-options:
-  -h, --help            show this help message and exit
-  -e EXIT_AFTER, --exit-after EXIT_AFTER
-                        Exit after get this number of errors
-  -ct CALLBACK_TIME, --callback-time CALLBACK_TIME
-                        Callback timeout
-  -c, --convert-body    Change the url parameters into request body ( in non-GET methods )
-  -o OUTPUT_FILE, --output OUTPUT_FILE
-                        The output json file location
-  -H HEADERS, --header HEADERS
-                        add custom header (ex:-H='Cookie: test=1; PHPSESSID=test')
-  -C COOKIES, --cookie COOKIES
-                        add cookie to the header (ex: 'cookie1=1; cookie2=2')
-  -v LOG_MODE, --logger-mode LOG_MODE
-                        change debug messages mode (1: info 2: debug 3: warning 4: error)
-  -s DELAY, --sleep DELAY
-                        number of seconds to hold between each HTTP(S) requests.
-  -M METHODS, --method METHODS
-                        Methods Allowed on your target
-  -m MODULES, --module MODULES
-                        run scant3r module (ex: -m=example)
-  -O, --more-scan       scanning with the current module with import another modules (eg: lorsrf xss/ssti scanner)
-  -P LORSRF_PARAMETERS, --lorsrf-parameters LORSRF_PARAMETERS
-                        how many parameters in one request for lorsrf module
-  -l TARGETLIST, --list TARGETLIST
-                        add targets list
-  -g, --add-parameters  Generate Famouse Parameters if your url dosen't have parameters
-  -j, --json            JSON Request Body
-  -p PROXY, --proxy PROXY
-                        Forward all requests to proxy
-  -r, --follow-redirects
-                        Follow redirects
-  -b BLINDXSS, --blind-host BLINDXSS
-                        add your xsshunter host (or any xss host)
-  -x HOST, --host HOST  add your host (burpcall,etc..)
-  -R, --random-agents   use random user agent
-  -w THREADS, --workers THREADS
-                        Number of workers (default: 50)
-  -t TIMEOUT, --timeout TIMEOUT
-                        set connection timeout (default: 10)
+Options:
+  -u, --url <URL>                      Your target URL
+  -e, --exit-after <EXIT_AFTER>        Exit after get this number of errors [default: 500]
+      --callback-time <CALLBACK_TIME>  Callback timeout [default: 0.5]
+  -c, --convert-body                   Change the url parameters into request body ( in non-GET methods )
+  -o, --output <OUTPUT>                The output json file location
+  -H, --header <HEADERS>               add custom header (ex:-H='Cookie: test=1; PHPSESSID=test')
+  -C, --cookie <COOKIES>               add cookie to the header (ex: 'cookie1=1; cookie2=2')
+  -v, --logger-mode <LOG_MODE>         change debug messages mode (1: info 2: debug 3: warning 4: error) [default: 2]
+  -s, --sleep <DELAY>                  number of seconds to hold between each HTTP(S) requests.
+  -M, --method <METHODS>               Methods Allowed on your target [default: GET]
+  -m, --module <MODULES>               run scant3r module (ex: -m=example)
+  -l, --list <TARGETLIST>              add targets list
+  -j, --json                           JSON Request Body
+  -p, --proxy <PROXY>                  Forward all requests to proxy
+  -r, --follow-redirects               Follow redirects
+  -R, --random-agents                  use random user agent
+  -w, --workers <THREADS>              Number of workers [default: 50]
+  -t, --timeout <TIMEOUT>              set connection timeout [default: 10]
+  -h, --help                           Print help
+  -V, --version                        Print version
 
 for Questions/suggestions/Bugs : https://github.com/knassar702/scant3r/issues
 wiki: https://github.com/knassar702/scant3r/wiki
 ```
 
+With Docker:
+
+```bash
+$ docker build -t scant3r .
+$ echo "http://testphp.vulnweb.com/listproducts.php?cat=1" | docker run -i scant3r -m all
+```
+
 
 ### Start
 ```bash
-$ echo "http://testphp.vulnweb.com/listproducts.php?cat=1" | scant3r -m all 
+# pipe a target and run every module
+$ echo "http://testphp.vulnweb.com/listproducts.php?cat=1" | scant3r -m all
+
+# scan a list of targets, JSON report out, 100 workers
+$ scant3r -l targets.txt -m xss,ssti -w 100 -o report.json
+
+# route traffic through Burp with a session cookie
+$ scant3r -u "http://target.com/search?q=1" -m all -p http://127.0.0.1:8080 -C "session=abc123"
 ```
 
 ## TODO-Features
 * [ ] Restful API
-* [ ] re-write the core utils in Rust by using pyo3 
-* [ ] Command line Modules ( with yaml file )
+* [x] re-write in Rust
 * [ ] Custom scanning map
 * [ ] Selenium Modules
 

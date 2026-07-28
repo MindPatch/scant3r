@@ -1,0 +1,36 @@
+[package]
+name = "scant3r"
+version = "1.0.0"
+edition = "2021"
+license = "GPL-3.0"
+description = "Module-based web automation & vulnerability scanner"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "cookies", "charset"] }
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+indicatif = "0.17"
+console = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+regex = "1"
+url = "2"
+scraper = "0.20"
+base64 = "0.22"
+uuid = { version = "1", features = ["v4"] }
+rsa = { version = "0.9", features = ["sha2", "pkcs5"] }
+sha2 = "0.10"
+aes = "0.8"
+cfb-mode = "0.8"
+addr = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+
+[dev-dependencies]
+
+[profile.release]
+lto = true
+codegen-units = 1

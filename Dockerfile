@@ -1,6 +1,12 @@
-FROM python:3.10-slim
+FROM rust:1-slim AS builder
 WORKDIR /scant3r
 COPY . .
-RUN pip install --no-cache-dir .
+RUN cargo build --release
+
+FROM debian:bookworm-slim
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /scant3r/target/release/scant3r /usr/local/bin/scant3r
 ENTRYPOINT ["scant3r"]
 CMD ["-h"]
